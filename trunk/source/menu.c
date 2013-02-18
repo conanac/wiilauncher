@@ -1580,7 +1580,7 @@ char saveedit()
 	switch(temp->flag)
 	{
 		case '?':
-			flag = '-';
+			flag = checkflag(code, codesize);
 		break;
 		case '-':
 			flag = '-';
