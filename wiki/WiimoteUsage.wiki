@@ -1,1 +1,2 @@
+#labels Featured
 See wiibrew.org website of the [http://wiibrew.org/wiki/WiiLauncher WiiLauncher] page for the usage of Wiimote with this application.
