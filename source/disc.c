@@ -15,6 +15,8 @@
 #define PART_INFO_OFFSET	0x10000
 
 int disc_type = IS_WII_DISC;
+char discidname[0x8];
+char discidnamelong[0x200];
 
 static struct
 {
@@ -22,6 +24,7 @@ static struct
 	u8 skip[0x10];
 	u32 checkwii;
 	u32 checkngc;
+	u8 discname[0x200];
 } disc_hdr ATTRIBUTE_ALIGN(32);
 
 s32 Disc_Open()
@@ -32,7 +35,7 @@ s32 Disc_Open()
 		
 	ret = WDVD_ReadDiskId((u8*)Disc_ID);
 	wifi_printf("disc_Disc_Open: WDVD_ReadDiskId() return value = %d\n", ret);
-	ret = WDVD_UnencryptedRead(&disc_hdr, 0x20, 0);
+	ret = WDVD_UnencryptedRead(&disc_hdr, 0x220, 0);
 	wifi_printf("disc_Disc_Open: WDVD_UnencryptedRead() return value = %d\n", ret);
 	if (disc_hdr.checkngc == NGC_MAGIC) {
 		disc_type = IS_NGC_DISC;
@@ -42,6 +45,8 @@ s32 Disc_Open()
 		disc_type = IS_UNK_DISC;
 	}
 	wifi_printf("disc_Disc_Open: disc_type value = %d\n", disc_type);
+	memcpy(discidname, disc_hdr.discid, 8);
+	memcpy(discidnamelong, disc_hdr.discname, 0x200);
 	
 	return ret;
 }

@@ -6,6 +6,7 @@
 #include <fat.h>
 #include <sys/unistd.h>
 #include <network.h>
+#include <curl/multi.h>
 #include <errno.h>
 #include <math.h>
 #include <ogc/lwp_watchdog.h>
@@ -194,7 +195,57 @@ s32 request_file(s32 server, FILE *f) {
     return 1;
 }
 
+static size_t writedata(void *ptr, size_t size, size_t nmemb, void *stream)
+{
+    int written = fwrite(ptr, size, nmemb, (FILE *)stream);
+    return written;
+}
+
 s32 sd_write_download(char *hostname, char *gameidbuffer, int pagenumber) {
+	
+	CURL *curl_handle;
+	char url[MAX_FILEPATH_LEN];
+	int res;
+
+	sprintf(url, "%s/index.php?c=%s&page=%d", hostname, gameidbuffer, pagenumber);
+	
+	if(curl_global_init(CURL_GLOBAL_ALL))
+		return -1;
+	
+    curl_global_init(CURL_GLOBAL_ALL);	
+	curl_handle = curl_easy_init();
+
+    /* setup cookies engine */
+    curl_easy_setopt(curl_handle, CURLOPT_COOKIEFILE, "sd:/wiilaunchercookie.txt");
+    curl_easy_setopt(curl_handle, CURLOPT_COOKIESESSION, 1L);	
+	/* setup user agent */
+	curl_easy_setopt(curl_handle, CURLOPT_USERAGENT, "libcurl-agent/1.0");
+    curl_easy_setopt(curl_handle, CURLOPT_SSL_VERIFYPEER, 0L);
+    curl_easy_setopt(curl_handle, CURLOPT_URL, url);
+	curl_easy_setopt(curl_handle, CURLOPT_HTTPGET, 1);
+	
+	FILE *sFile = fopen ("sd:/wiilauncher.tmp", "wb");
+	if (!sFile){
+		return 0;
+	};		
+	curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, writedata);
+    curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, (void *)sFile);
+	
+	res = curl_easy_perform(curl_handle);	
+	if (res)
+		return -1;
+	
+	curl_easy_setopt(curl_handle, CURLOPT_COOKIELIST, "FLUSH");	
+	curl_easy_setopt(curl_handle, CURLOPT_COOKIEJAR, "sd:/wiilaunchercookie.txt");
+	curl_easy_cleanup(curl_handle);
+	curl_global_cleanup();
+	
+	fclose(sFile);
+	
+	return 1;
+}
+
+s32 sd_write_download_old(char *hostname, char *gameidbuffer, int pagenumber) {
 		
 	char filepath[MAX_FILEPATH_LEN];
 	char http_request[1000];

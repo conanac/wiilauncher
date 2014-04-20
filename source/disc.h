@@ -7,6 +7,8 @@ extern "C" {
 #endif /* __cplusplus */
 
 extern int disc_type;
+extern char discidname[0x8];
+extern char discidnamelong[0x200];
 
 s32 Disc_Open();
 s32 Disc_FindPartition(u32 *outbuf);

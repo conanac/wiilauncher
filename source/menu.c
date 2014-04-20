@@ -23,6 +23,7 @@
 #include "wdvd.h"
 #include "gc_dvd.h"
 #include "download.h"
+#include "sloane.h"
 
 GXRModeObj *rmode = NULL;
 u32 *xfb;
@@ -51,12 +52,34 @@ void sys_init(void)
     VIDEO_ClearFrameBuffer(rmode, xfb, COLOR_BLACK);
 }
 
+void sys_init_con(void)
+{
+	VIDEO_Init();
+	
+	rmode = VIDEO_GetPreferredMode(NULL);
+	xfb = MEM_K0_TO_K1(SYS_AllocateFramebuffer(rmode));
+	VIDEO_Configure(rmode);
+	VIDEO_SetNextFramebuffer(xfb);
+	
+	VIDEO_SetBlack(FALSE);
+
+	VIDEO_Flush();
+
+	VIDEO_WaitVSync();
+	if(rmode->viTVMode&VI_NON_INTERLACE) VIDEO_WaitVSync();
+
+    int x = 0, y = 0, w = 640, h = 384;
+	CON_InitEx(rmode, x, y, w, h);
+
+    VIDEO_ClearFrameBuffer(rmode, xfb, COLOR_BLACK);
+}
+
 void resetscreen()
 {
 	printf("\x1b[2J");
-	printf("\n    WiiLauncher v0.1 (c) 2013 conanac");
+	printf("\n    WiiLauncher v0.2 (c) 2013, 2014 conanac");
 	printf("\n    Thanks to developers of: geckoos, wiiflow, tinyload, ftpii, wiixplorer,");
-	printf("\n    cleanrip. And others whose codes are reused in this wiibrew");
+	printf("\n    cleanrip, wiibrowser. And others whose codes are reused in this wiibrew");
 	printf("\n    USB Gecko = [%s]      WiFi Debug = [%s]", geckoattached ? "ON" : "OFF",
 			(wifigecko != -1) ? "ON" : "OFF");     
 	printf("\n\n");
@@ -65,7 +88,7 @@ void resetscreen()
 void resetscreeneditheader(char *name, char *gameidbuffer, char flag)
 {
 	printf("\x1b[2J");
-	printf("\n    WiiLauncher v0.1 (c) 2013 conanac");
+	printf("\n    WiiLauncher v0.2 (c) 2013, 2014 conanac");
 	printf("\n    USB Gecko = [%s]      WiFi Debug = [%s]", geckoattached ? "ON" : "OFF",
 			(wifigecko != -1) ? "ON" : "OFF");     
 	printf("\n\n");
@@ -561,10 +584,11 @@ void exitme() {
 	
 	if (loaderhbc) {	
 		wifi_printf("menu_exitme: return to loader (HBC)\n");
-		if (WII_LaunchTitle(0x00010001AF1BF516ULL) < 0)
-			if (WII_LaunchTitle(0x000100014A4F4449ULL) < 0)
-				if (WII_LaunchTitle(0x0001000148415858ULL) < 0)
-					WII_ReturnToMenu();
+		if (WII_LaunchTitle(0x000100014C554C5AULL) < 0)
+			if (WII_LaunchTitle(0x00010001AF1BF516ULL) < 0)
+				if (WII_LaunchTitle(0x000100014A4F4449ULL) < 0)
+					if (WII_LaunchTitle(0x0001000148415858ULL) < 0)
+						WII_ReturnToMenu();
 	}
 	else {
 		wifi_printf("menu_exitme: return to Wii menu\n");
@@ -599,6 +623,16 @@ static void menu_pad_root() {
 
 	if(buttonsDown & PAD_BUTTON_START){
 		exitme();
+	}
+	
+	// Easter Egg
+	if((buttonsDown & PAD_BUTTON_B) ||
+		(WiibuttonsDown & WPAD_BUTTON_B) ||
+		(WiibuttonsDown & WPAD_CLASSIC_BUTTON_B)){
+		sys_init_con();
+		donut();
+		sys_init();
+		menu_number = 0;
 	}
 	
 	if((buttonsDown & PAD_BUTTON_DOWN) ||
@@ -2716,7 +2750,7 @@ static int identify_disc() {
 
 s32 menu_generatedownloadlist() {
 	
-	int retd, disc_type;
+	int retd;
 	downloadlistitems *tempitem = NULL;
 	channellistitems *tempchan = NULL;
 	char truncatestring[4] = "...";
@@ -2729,13 +2763,25 @@ s32 menu_generatedownloadlist() {
 	if (retd == NO_DISC) 
 		disc = false;
 		
-	if (disc) 
+	if (disc)
 	{
 		memset(gameName, 0, 32);
-		memset(internalName, 0, 512);
-		disc_type = identify_disc();
+		memset(internalName, 0, 512);		
+		if(IsWiiU())
+		{
+			Disc_SetLowMemPre();
+			WDVD_Init();
+			Disc_Open();
+			memcpy(gameName, discidname, 8);
+			memcpy(internalName, discidnamelong, 0x200);
+			WDVD_Close();		
+		} 
+		else
+		{
+			disc_type = identify_disc();
+			dvd_motor_off();
+		}				
 		wifi_printf("menu_menu_generatedownloadlist: disc_type value = %d\n", disc_type);
-		dvd_motor_off();
 		wifi_printf("menu_menu_generatedownloadlist: gameName value = %s\n%s\n", 
 			gameName, internalName);
 		
@@ -2757,6 +2803,7 @@ s32 menu_generatedownloadlist() {
 				sprintf(displayName,"{Unknown Disc}-[%s] %s", gameName, internalName);
 			break;
 		}
+		
 		memcpy(tempitem->dlitems, displayName, strlen(displayName)+1);
 		tempitem->selected = 0;
 		memcpy(tempitem->gameidbuffer, gameName, 8);

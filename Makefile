@@ -10,12 +10,12 @@ TARGET		:=	boot
 BUILD		:=	build
 SOURCES		:=	source
 DATA		:=	data
-INCLUDES	:=	
+INCLUDES	:=	source libs/include
 
-CFLAGS		=	-O1 -std=gnu99 -Wall -Wextra -Wformat $(MACHDEP) $(INCLUDE)
+CFLAGS		=	-g -O3 -std=gnu99 -Wall -Wextra -Wformat $(MACHDEP) $(INCLUDE)
 LDFLAGS		=	$(MACHDEP) -Wl,-Map,$(notdir $@).map,--section-start,.init=0x80B00000
 
-LIBS	:=	-lfat -lwiiuse -lbte -logc -lm
+LIBS	:=	-lcurl -lz -lcyassl -lnetport -lfat -lwiiuse -lbte -logc -lm
 LIBDIRS	:=	$(CURDIR)
 
 ifneq ($(BUILD),$(notdir $(CURDIR)))
@@ -43,12 +43,13 @@ export OFILES	:=	$(addsuffix .o,$(BINFILES)) \
 					$(CPPFILES:.cpp=.o) $(CFILES:.c=.o) \
 					$(sFILES:.s=.o) $(SFILES:.S=.o)
 
-export INCLUDE	:=	$(foreach dir,$(INCLUDES), -iquote $(CURDIR)/$(dir)) \
+export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
 					$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
 					-I$(CURDIR)/$(BUILD) \
 					-I$(LIBOGC_INC)
-
+					
 export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib) \
+					-L$(LIBDIRS)/libs/wii \
 					-L$(LIBOGC_LIB)
 
 export OUTPUT	:=	$(CURDIR)/$(TARGET)
@@ -58,7 +59,7 @@ export OUTPUT	:=	$(CURDIR)/$(TARGET)
 $(BUILD):
 	@[ -d $@ ] || mkdir -p $@
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
-
+	
 clean:
 	@echo clean ...
 	@rm -fr $(BUILD) $(OUTPUT).elf $(OUTPUT).bin $(OUTPUT).dol
