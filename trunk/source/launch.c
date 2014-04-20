@@ -4,6 +4,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <gccore.h>
+#include <ogc/machine/processor.h>
 #include <wiiuse/wpad.h>
 #include <network.h>
 #include <sdcard/wiisd_io.h>
@@ -49,6 +50,11 @@ static void power_cb() {
 static void reset_cb() {
 	
 	STM_RebootSystem();
+}
+
+bool IsWiiU( void )
+{
+    return ( (*(vu32*)(0xCd8005A0) >> 16 ) == 0xCAFE );
 }
 
 s32 rungamechannel(u64 title) {
@@ -305,6 +311,13 @@ s32 runchannel(u64 channeltoload) {
 
 s32 runmenu() {
 
+	if(IsWiiU()) {
+		printf("\n    Cannot launch Rebooter in WiiMode-WiiU");		
+		sleep(2);
+		runmenunow = 0;
+		menu_number = 0;
+		return 0;
+	}
 	WPAD_Shutdown();
 	printf("\x1b[2J");
 	VIDEO_WaitVSync();		
@@ -388,12 +401,18 @@ s32 rundisc() {
 		return 0;
 	}
 	if(disc_type == IS_NGC_DISC) {
-		printf("\n    Launch GameCube disc");
-		printf("\n    Cannot use cheat codes and other features");		
-		sleep(2);
+		if(IsWiiU()) {
+			printf("\n    Cannot launch GameCube disc in WiiMode-WiiU");
+			rundiscnow = 0;
+			menu_number = 0;		
+			sleep(2);		
+		} else {
+			printf("\n    Launch GameCube disc");
+			printf("\n    Cannot use cheat codes and other features");		
+			sleep(2);
 		
-		WII_LaunchTitle(0x100000100LL);
-		
+			WII_LaunchTitle(0x100000100LL);
+		}		
 		return 0;
 	}
 	memset(gameidbuffer, 0, 8);
@@ -596,6 +615,12 @@ void prepare() {
 	wifi_printf("launch_prepare: geckoattached value = %d\n", geckoattached);
 	sleep(1);
 	
+	bool wiiu = IsWiiU();
+	wifi_printf("launch_prepare: IsWiiU return value = %s\n", wiiu ? "True" : "False");
+	if(wiiu) {
+		write32(0xd8006a0, 0x30000004), mask32(0xd8006a8, 0, 2);
+	}
+	
 	sys_init();
 	resetscreen();
 	
@@ -649,3 +674,4 @@ void prepare() {
 	sd_load_config();
 	wifi_printf("launch_prepare: sd_found value = %d\n", sd_found);
 }
+

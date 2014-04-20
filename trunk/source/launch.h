@@ -22,6 +22,7 @@ void prepare();
 s32 runchannel(u64 title);
 s32 runmenu();
 s32 rundisc();
+bool IsWiiU();
 
 #ifdef __cplusplus
 }
