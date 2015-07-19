@@ -1,0 +1,1 @@
+Download [r11](https://code.google.com/p/wiilauncher/source/detail?r=11) apps package from wiibrew.org location: [wiiLauncher\_r11.zip](http://wiibrew.org/w/images/1/12/Wiilauncher_r11.zip)

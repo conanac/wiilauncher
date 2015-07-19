@@ -1,0 +1,1 @@
+See wiibrew.org website of the [WiiLauncher](http://wiibrew.org/wiki/WiiLauncher) page for the usage of Wiimote with this application.
